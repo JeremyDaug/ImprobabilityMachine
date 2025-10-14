@@ -13,8 +13,26 @@ pub struct CoinToss {
     pub heads_chance: f64,
     /// The current result of the game. 
     pub result: bool,
+    /// The current state of the game.
+    pub state: CoinTossState,
     /// Shared common Data
     pub base: GameCommonData,
+}
+
+#[derive(Debug)]
+pub enum CoinTossState {
+    /// Hold Bet, no active bet ongoing. If show results of previous bet if any.
+    Hold,
+    /// Start Bet button clicked, turn bet on and enter betting phase.
+    /// This includes animating the coin flip. Lasts maybe half a second.
+    /// 
+    /// Can be skipped.
+    StartBet,
+    /// Bet is currently active, timer is started. Exits on timeout
+    /// complete, player ends it early, or a kickout is triggered.
+    InBet,
+    /// Bet has been closed out, payout entropy and money to the player.
+    ClosingBet,
 }
 
 impl CoinToss {
@@ -23,6 +41,7 @@ impl CoinToss {
         Self { 
             heads_chance: 0.5,
             result: true,
+            state: CoinTossState::Hold,
             base: GameCommonData::new("Coin Toss".to_string(), 1.0, 100.0, 
                 2.0, Duration::from_secs(30))
         }
