@@ -1,9 +1,9 @@
-use std::{io::{self, stdin, stdout, Write}, thread, time::{Duration, Instant}};
+use std::{io::{stdin, stdout}, time::{Duration, Instant}};
 
-use crossterm::{cursor::{self, MoveToPreviousLine, SavePosition}, event::{poll, read, KeyEvent}, execute, style::Print, terminal, ExecutableCommand, QueueableCommand};
-use macroquad::miniquad::native::linux_x11::libx11::KeyCode;
+use crossterm::{event::{poll, read, Event, KeyCode}, style::Print, terminal, ExecutableCommand};
+use rand::Rng;
 
-use crate::{coin, coin_toss::{CoinToss, CoinTossState}, common_state::CommonState};
+use crate::{coin_toss::{CoinToss, CoinTossState}, common_state::CommonState, game::entropy};
 
 pub fn select_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, start: Instant) -> Option<CoinTossState> {
     match coin_toss.state {
@@ -18,20 +18,72 @@ pub fn select_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, s
     }
 }
 
+pub fn in_bet<R: Rng>(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
+_start: Instant, rng: &mut R) -> Option<CoinTossState> {
+    stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
+    // subtract money for bet
+    common_state.money -= coin_toss.base.current_bet;
+    // Commit flip
+    coin_toss.result = coin_toss.bet(rng);
+    // save entropy
+    let entropy_gained = coin_toss.entropy_gained();
+    common_state.entropy += entropy_gained;
+    // start timer
+    coin_toss.base.bet_start = Some(Instant::now());
+    loop {
+        // print screen and timer.
+        stdout().execute(
+            Print("\t\t!!!Coin Toss!!!\nLand on heads to win!
+            Commands: F -> Flip again (0.5 Entropy Cost) | W -> Select Heads (1 Entropy Cost) | Q -> End Bet
+            Bet Min: $1 | Bet Max: $100\n")).unwrap();
+        stdout().execute(
+            Print(format!("Money: ${}\tEntropy: {}b\n", common_state.money, common_state.entropy))
+        ).unwrap();
+        stdout().execute(Print(format!("Current Bet: {}\t Entropy Gained: {}\n", coin_toss.base.current_bet, entropy_gained))).unwrap();
+        stdout().execute(Print(format!("Time Remaining: {} s\n", coin_toss.bet_time_remaining()))).unwrap();
+        if coin_toss.result {
+            stdout().execute(Print("\t\tH\t! You're Winner !\n")).unwrap();
+        } else {
+            stdout().execute(Print("\t\t\tT\t! FAILURE !\n")).unwrap();
+        }
+        // Get key presses while looping.
+        if poll(Duration::from_millis(500)).unwrap() {
+            if let Event::Key(event) = read().unwrap() {
+                if event.is_release() {
+                    if event.code == KeyCode::Char('f') {
+
+                    } else if event.code == KeyCode::Char('w') {
+
+                    } else if event.code == KeyCode::Char('q') {
+
+                    }
+                }
+            }
+        }
+        // lostly check that the bet is over. If it is, close out and move on.
+        if coin_toss.bet_time_remaining() == 0.0 {
+            
+        }
+    }
+}
+
 /// # Start Bet
 /// 
 /// Starts the bet, flips coin a few times, then lands on it's head.
-pub fn start_bet(common_state: &CommonState, coin_toss: &CoinToss, start: Instant) -> Option<CoinTossState> {
+pub fn start_bet(common_state: &CommonState, coin_toss: &mut CoinToss, start: Instant) -> Option<CoinTossState> {
     stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
     let flip_start = Instant::now();
     let mut msg = String::new();
+    //thread::sleep(Duration::from_secs(1));
     loop {
+        //sleep(Duration::from_millis(250));
+        stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
         let time = Instant::now() - start;
         let side = (time.as_secs_f32() * 10.0) as i32 % 2;
         let from_start = Instant::now() - flip_start;
         // 
-        stdout().write_all("\t\t!!!Coin Toss!!!\nCommands: F -> Flip | Q -> Exit | Enter number to change Bet\nBet Min: $1 | Bet Max: $100\n".as_bytes()).unwrap();
-        stdout().write_all(format!("Money: ${}\tEntropy: {} b\n", common_state.money, common_state.entropy).as_bytes()).unwrap();
+        stdout().execute(Print("\t\t!!!Coin Toss!!!\nLand on heads to win!\nCommands: F -> Flip | Q -> Exit | Enter number to change Bet\nBet Min: $1 | Bet Max: $100\n")).unwrap();
+        stdout().execute(Print(format!("Money: ${}\tEntropy: {} b\n", common_state.money, common_state.entropy))).unwrap();
         stdout().execute(Print(format!("Current Bet: {}\n", coin_toss.base.current_bet))).unwrap();
         stdout().execute(Print(msg.as_str())).unwrap();
         if side == 1 {
@@ -42,6 +94,7 @@ pub fn start_bet(common_state: &CommonState, coin_toss: &CoinToss, start: Instan
         // after three seconds, finish the coin toss and start the bet proper.
         if Duration::from_secs(3) < from_start {
             //common_state.
+            coin_toss.state = CoinTossState::InBet;
             return Some(CoinTossState::InBet);
         }
     }
@@ -67,7 +120,7 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
         // swap the H / T every half second.
         let mut buff = String::new();
         stdin().read_line(&mut buff).unwrap();
-        println!("{}, {}", buff, buff.len());
+        //println!("{}, {}", buff, buff.len());
         buff = buff.trim_end().to_string();
         //buff.parse::<f64>().unwrap();
         if let Ok(bet) = buff.parse::<f64>() {
@@ -78,6 +131,7 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
             }
         } else if buff.to_lowercase() == "f" {
             stdout().execute(Print("Flipping!")).unwrap();
+            coin_toss.state = CoinTossState::StartBet;
             return Some(CoinTossState::StartBet);
         } else if buff.to_lowercase() == "q" {
             stdout().execute(Print("Quitting!")).unwrap();
@@ -86,7 +140,6 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
             msg = String::from("Invalid Command.");
         }
 
-        thread::sleep(Duration::from_secs(1));
         stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
     }
 }

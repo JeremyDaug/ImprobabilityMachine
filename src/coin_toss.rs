@@ -47,6 +47,31 @@ impl CoinToss {
         }
     }
 
+    /// # Bet Time Remaining
+    /// 
+    /// The time remaining for a coin toss bet.
+    /// 
+    /// For Coin Toss the bet duration is 30 seconds.
+    pub fn bet_time_remaining(&self) -> f64 {
+        self.base.bet_time_remaining(Duration::from_secs(30)).unwrap_or(0.0)
+    }
+
+    /// # Entropy Gained
+    /// 
+    /// Given the current state, how much entropy is gained by the user.
+    /// 
+    /// While the exact rules on this will depend on the game and bet involved,
+    /// for Coin Toss, it's fairly simple. The player always wins on heads,
+    /// and there are only two states possible, and they have an equal chance
+    /// of happening.
+    /// 
+    /// This means no actual calculation is needed as the value of each is just 1.
+    /// 
+    /// This comes from -lg(1/2) = 1
+    pub fn entropy_gained(&self) -> f64 {
+        1.
+    }
+
     /// # Game Loop
     /// 
     /// The loop for the game. Does everything it needs, updating data, checking bets, 

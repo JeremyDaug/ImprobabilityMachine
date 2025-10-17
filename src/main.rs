@@ -35,7 +35,7 @@ async fn main() {
             if let None = select_screen(&mut common_state, &mut coin_toss, start_time) {
                 println!("\n\nThank you for playing!");
                 break;
-            }
+            } 
         }
     } else if mode == "ui" {
         let mut change = 0.0;

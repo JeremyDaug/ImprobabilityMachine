@@ -1,5 +1,7 @@
 use std::time::{Duration, Instant};
 
+use macroquad::miniquad::gl::WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB;
+
 /// The current defacto bet duration. Currently set to 30 seconds.
 const BET_DURATION: Duration = Duration::from_secs(30);
 
@@ -193,10 +195,33 @@ impl GameCommonData {
     /// Buyouts are rounded to 5 second increments.
     fn calculate_buyout(&self, now: Instant) -> f64 {
         let buyout_max = self.buyout_factor * (self.real_gains - self.expected_gains) * 2.0;
-        let time_remaining_factor = (self.kickout_remaining.as_secs_f64() / 
+        let time_remaining_factor = (self.kickout_time_remaining() / 
             self.kickout_length_max.as_secs_f64() / 5.0).ceil();
         buyout_max * time_remaining_factor
+    }
 
+    /// # Bet Time Remaining
+    /// 
+    /// How much time remains in the bet, based on current instant.
+    /// 
+    /// Returns in f64 form instead of Duration, if it returns none, then the bet is over.
+    pub fn bet_time_remaining(&self, bet_duration: Duration) -> Option<f64> {
+        if let Some(end) = self.bet_end_time(bet_duration) {
+            let now = Instant::now();
+            if now < end {
+                Some((end - now).as_secs_f64())
+            } else {
+                None
+            }
+        } else { None }
+    }
+
+    pub fn bet_end_time(&self, bet_duration: Duration) -> Option<Instant> {
+        if let Some(start) = self.bet_start {
+            Some(start + bet_duration)
+        } else {
+            None
+        }
     }
 }
 
