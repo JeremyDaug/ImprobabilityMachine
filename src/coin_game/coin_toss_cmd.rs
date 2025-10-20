@@ -1,11 +1,12 @@
-use std::{io::{stdin, stdout}, time::{Duration, Instant}};
+use std::{io::{stdin, stdout}, thread::sleep, time::{Duration, Instant}};
 
 use crossterm::{event::{poll, read, Event, KeyCode}, style::Print, terminal, ExecutableCommand};
 use rand::Rng;
 
-use crate::{coin_toss::{CoinToss, CoinTossState}, common_state::CommonState, game::entropy};
+use crate::{coin_game::coin_toss::{CoinToss, CoinTossState}, common_state::CommonState};
 
-pub fn select_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, start: Instant) -> Option<CoinTossState> {
+pub fn select_screen<R: Rng>(common_state: &mut CommonState, 
+coin_toss: &mut CoinToss, start: Instant, rng: &mut R) -> Option<CoinTossState> {
     match coin_toss.state {
         CoinTossState::Hold => {
             holding_screen(common_state, coin_toss, start)
@@ -13,8 +14,9 @@ pub fn select_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, s
         CoinTossState::StartBet => {
             start_bet(common_state, coin_toss, start)
         },
-        CoinTossState::InBet => todo!(),
-        CoinTossState::ClosingBet => todo!(),
+        CoinTossState::InBet => {
+            in_bet(common_state, coin_toss, start, rng)
+        },
     }
 }
 
@@ -27,17 +29,18 @@ _start: Instant, rng: &mut R) -> Option<CoinTossState> {
     coin_toss.result = coin_toss.bet(rng);
     // save entropy
     let entropy_gained = coin_toss.entropy_gained();
-    common_state.entropy += entropy_gained;
+    common_state.add_entropy(entropy_gained);
     // start timer
     coin_toss.base.bet_start = Some(Instant::now());
     loop {
         // print screen and timer.
         stdout().execute(
             Print("\t\t!!!Coin Toss!!!\nLand on heads to win!
-            Commands: F -> Flip again (0.5 Entropy Cost) | W -> Select Heads (1 Entropy Cost) | Q -> End Bet
+            Commands: F -> Flip again (0.5 Entropy Cost) | W -> Select Heads (1 Entropy Cost) |
+            L -> Select Tails (1 Entropy Cost) | Q -> End Bet
             Bet Min: $1 | Bet Max: $100\n")).unwrap();
         stdout().execute(
-            Print(format!("Money: ${}\tEntropy: {}b\n", common_state.money, common_state.entropy))
+            Print(format!("Money: ${}\tEntropy: {}b\tSuspicion: {}\n", common_state.money, common_state.entropy, coin_toss.base.suspicion))
         ).unwrap();
         stdout().execute(Print(format!("Current Bet: {}\t Entropy Gained: {}\n", coin_toss.base.current_bet, entropy_gained))).unwrap();
         stdout().execute(Print(format!("Time Remaining: {} s\n", coin_toss.bet_time_remaining()))).unwrap();
@@ -49,22 +52,37 @@ _start: Instant, rng: &mut R) -> Option<CoinTossState> {
         // Get key presses while looping.
         if poll(Duration::from_millis(500)).unwrap() {
             if let Event::Key(event) = read().unwrap() {
-                if event.is_release() {
-                    if event.code == KeyCode::Char('f') {
-
-                    } else if event.code == KeyCode::Char('w') {
-
-                    } else if event.code == KeyCode::Char('q') {
-
-                    }
+                if event.code == KeyCode::Char('f') {
+                    // Flip coin again, ignore whether the player has won or lost.
+                    common_state.entropy -= 0.5;
+                    coin_toss.result = coin_toss.flip(rng);
+                } else if event.code == KeyCode::Char('w') {
+                    // force coin to heads
+                    common_state.entropy -= 1.0;
+                    coin_toss.result = true;
+                } else if event.code == KeyCode::Char('l') {
+                    // force coin to tails
+                    common_state.entropy -= 1.0;
+                    coin_toss.result = false;
+                } else if event.code == KeyCode::Char('q') {
+                    // exiting bet early.
+                    break;
                 }
             }
         }
         // lostly check that the bet is over. If it is, close out and move on.
         if coin_toss.bet_time_remaining() == 0.0 {
-            
+            break;
         }
+        sleep(Duration::from_millis(50));
+        stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
     }
+    // finalize financial gains if successful.
+    if coin_toss.result {
+        common_state.money += coin_toss.base.base_payout * coin_toss.base.current_bet;
+    }
+    coin_toss.state = CoinTossState::Hold;
+    return Some(CoinTossState::Hold);
 }
 
 /// # Start Bet
@@ -73,11 +91,10 @@ _start: Instant, rng: &mut R) -> Option<CoinTossState> {
 pub fn start_bet(common_state: &CommonState, coin_toss: &mut CoinToss, start: Instant) -> Option<CoinTossState> {
     stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
     let flip_start = Instant::now();
-    let mut msg = String::new();
+    let msg = String::new();
     //thread::sleep(Duration::from_secs(1));
     loop {
         //sleep(Duration::from_millis(250));
-        stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
         let time = Instant::now() - start;
         let side = (time.as_secs_f32() * 10.0) as i32 % 2;
         let from_start = Instant::now() - flip_start;
@@ -97,6 +114,8 @@ pub fn start_bet(common_state: &CommonState, coin_toss: &mut CoinToss, start: In
             coin_toss.state = CoinTossState::InBet;
             return Some(CoinTossState::InBet);
         }
+        sleep(Duration::from_millis(100));
+        stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
     }
 }
 
@@ -126,6 +145,8 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
         if let Ok(bet) = buff.parse::<f64>() {
             if bet < coin_toss.base.bet_min || bet > coin_toss.base.bet_max {
                 msg = String::from("Bet must be within bounds!");
+            } if bet > common_state.money {
+                msg = String::from("Not enough money!!");
             } else {
                 coin_toss.base.current_bet = bet.floor();
             }
@@ -138,6 +159,13 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
             return None;
         } else {
             msg = String::from("Invalid Command.");
+        }
+
+        if common_state.money < 1.0 {
+            stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
+            stdout().execute(Print("!!! Ran out of Money! Game Over !!!")).unwrap();
+            stdin().read_line(&mut buff).unwrap();
+            return None;
         }
 
         stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();

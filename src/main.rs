@@ -1,16 +1,18 @@
 pub(crate) mod money;
-pub(crate) mod coin_toss;
 pub mod game;
 pub mod common_state;
-mod coin;
-pub mod coin_toss_cmd;
+pub mod coin_game;
+pub mod gfx;
+pub mod machine;
+pub mod main_menu;
 
-use std::{env, fs::File, io::{stdout, Write}, ops::Index, thread::sleep, time::{Duration, Instant}};
+use std::{env, time::{Duration, Instant}};
 
-use crossterm::{cursor, execute, style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor}, terminal::{Clear, ClearType}, ExecutableCommand, QueueableCommand};
-use macroquad::{prelude::*, ui::widgets::Button};
+use macroquad::prelude::*;
+use ::rand as stdrng;
 
-use crate::{coin::Coin, coin_toss::CoinToss, coin_toss_cmd::{holding_screen, select_screen}, common_state::{ButtonAction, CommonState}};
+use crate::{
+    coin_game::{coin_toss::CoinToss, coin_toss_cmd::select_screen}, common_state::{ButtonAction, CommonState}, gfx::coin::Coin, machine::machine::Machine};
 
 #[macroquad::main("Improbability Machine")]
 async fn main() {
@@ -22,9 +24,14 @@ async fn main() {
         entropy: 100.0, 
         active_game: 0, 
         current_bet: 10.0, 
-        button_clicked: ButtonAction::None
+        button_clicked: ButtonAction::None,
+        machine: Machine::new(0.0) ,
+        player_name: String::new(),
+        last_prior_save: Instant::now(),
+        game_length: Duration::ZERO
     };
     let mut coin_toss = CoinToss::new();
+    let mut rng = stdrng::rng();
 
     if mode == "cmd" {
         println!("\n\n\n\n\n\n\n\n");
@@ -32,7 +39,7 @@ async fn main() {
         println!("\n\n\n\n\n");
 
         loop {
-            if let None = select_screen(&mut common_state, &mut coin_toss, start_time) {
+            if let None = select_screen(&mut common_state, &mut coin_toss, start_time, &mut rng) {
                 println!("\n\nThank you for playing!");
                 break;
             } 

@@ -31,8 +31,6 @@ pub enum CoinTossState {
     /// Bet is currently active, timer is started. Exits on timeout
     /// complete, player ends it early, or a kickout is triggered.
     InBet,
-    /// Bet has been closed out, payout entropy and money to the player.
-    ClosingBet,
 }
 
 impl CoinToss {
@@ -52,6 +50,8 @@ impl CoinToss {
     /// The time remaining for a coin toss bet.
     /// 
     /// For Coin Toss the bet duration is 30 seconds.
+    /// 
+    /// If no ongoing bet, or the bet time has run out, return 0.0.
     pub fn bet_time_remaining(&self) -> f64 {
         self.base.bet_time_remaining(Duration::from_secs(30)).unwrap_or(0.0)
     }
