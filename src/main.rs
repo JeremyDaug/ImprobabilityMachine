@@ -12,7 +12,7 @@ use macroquad::prelude::*;
 use ::rand as stdrng;
 
 use crate::{
-    coin_game::{coin_toss::CoinToss, coin_toss_cmd::select_screen}, common_state::{ButtonAction, CommonState}, gfx::coin::Coin, machine::machine::Machine};
+    coin_game::{coin_toss::CoinToss, coin_toss_cmd::select_screen}, common_state::{ButtonAction, CommonState}, gfx::coin::Coin, machine::machine::Machine, main_menu::main_menu};
 
 #[macroquad::main("Improbability Machine")]
 async fn main() {
@@ -38,12 +38,7 @@ async fn main() {
         println!("-------------- Command Line Interface Selected. Starting up -----------");
         println!("\n\n\n\n\n");
 
-        loop {
-            if let None = select_screen(&mut common_state, &mut coin_toss, start_time, &mut rng) {
-                println!("\n\nThank you for playing!");
-                break;
-            } 
-        }
+        main_menu(&mut common_state);
     } else if mode == "ui" {
         let mut change = 0.0;
 

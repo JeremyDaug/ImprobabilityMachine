@@ -3,9 +3,9 @@ use std::{fs::{self, File}, io::{stdin, stdout, Read, Write}, path::Path, time::
 use crossterm::{style::Print, terminal, ExecutableCommand};
 use ::rand as stdrng;
 
-use crate::{coin_game::{coin_toss::{self, CoinToss, CoinTossState}, coin_toss_cmd}, common_state::{self, ButtonAction, CommonState}, machine::machine::Machine};
+use crate::{coin_game::{coin_toss::CoinToss, coin_toss_cmd}, common_state::{ButtonAction, CommonState}, machine::machine::Machine};
 
-static SAVE_PATH: &str = "./save/save.txt";
+static SAVE_PATH: &str = "./saves/save.txt";
 
 pub fn main_menu(common_state: &mut CommonState) {
     let mut msg = String::new();
@@ -43,7 +43,11 @@ pub fn main_menu(common_state: &mut CommonState) {
             common_state.last_prior_save = Instant::now();
             game_menu(&mut common_state);
         } else if buff.to_lowercase() == "l" {
-
+            stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
+            stdout().execute(Print("----- Loading Save -----\n")).unwrap();
+            common_state = load_save();
+            common_state.last_prior_save = Instant::now();
+            game_menu(&mut common_state);
         } else {
             msg = String::from("Command not recognized.");
         }
@@ -56,12 +60,12 @@ pub fn game_menu(common_state: &mut CommonState) {
     loop {
         stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
         stdout().execute(Print("!!!!!!!!!! Improbability Machine !!!!!!!!!!\n\n")).unwrap();
+        stdout().execute(Print(format!("{}\n\n", msg))).unwrap();
         stdout().execute(Print(format!("Money: ${}\tEntropy: {} b\n", common_state.money, common_state.entropy))).unwrap();
         stdout().execute(Print("Game Commands:\n")).unwrap();
         stdout().execute(Print("(1) Coin Toss\n")).unwrap();
         stdout().execute(Print("(S)ave Game\n")).unwrap();
         stdout().execute(Print("(Q) Return to Main Menu\n\n")).unwrap();
-        stdout().execute(Print(format!("{}\n\n", msg))).unwrap();
         let mut buff = String::new();
         stdin().read_line(&mut buff).unwrap();
         buff = buff.trim().to_string();
@@ -76,10 +80,10 @@ pub fn game_menu(common_state: &mut CommonState) {
                     break;
                 }
             }
-        } else if buff == "S" {
+        } else if buff.to_lowercase() == "s" {
             save_common_state(common_state);
             msg = String::from("!!!!! Saved !!!!!!")
-        } else if buff == "Q" {
+        } else if buff.to_lowercase() == "q" {
             return;
         }
     }
