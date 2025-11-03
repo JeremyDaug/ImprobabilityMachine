@@ -5,9 +5,11 @@ pub mod coin_game;
 pub mod gfx;
 pub mod machine;
 pub mod main_menu;
+pub mod bang;
 
-use std::{env, time::{Duration, Instant}};
+use std::{env, io::{stdin, stdout}, time::{Duration, Instant}};
 
+use crossterm::{ExecutableCommand, style::Print};
 use macroquad::prelude::*;
 use ::rand as stdrng;
 
@@ -86,6 +88,20 @@ async fn main() {
         println!("The Improbability machine has a 2 modes it can run in.\n");
         println!("cmd: Command Line mode. Used for more direct debugging. Very basic.");
         println!("ui: The Game UI that will be used. Currently only barely functional, don't expect much.");
+    } else if mode.to_lowercase() == "tools" {
+        loop {
+            stdout().execute(Print("Tools menu:\n\n")).unwrap();
+            stdout().execute(Print("(1) : Bang Probability Calculations\n")).unwrap();
+            stdout().execute(Print("(q) : Quit\n\n")).unwrap();
+            let mut buff = String::new();
+            stdin().read_line(&mut buff).unwrap();
+            buff = buff.trim().to_string();
+            if buff == "1" {
+                bang::bang_probs();
+            } else if buff.to_lowercase() == "q" {
+                break;
+            }
+        }
     } else {
         println!("Mode command not given. Try -- help for modes")
     }
@@ -101,4 +117,4 @@ fn is_help_cmd(arg: &String) -> bool {
 struct Point {
     pub x: f32,
     pub y: f32
-} 
+}

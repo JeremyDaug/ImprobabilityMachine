@@ -3,7 +3,7 @@ use std::{fs::{self, File}, io::{stdin, stdout, Read, Write}, path::Path, time::
 use crossterm::{style::Print, terminal, ExecutableCommand};
 use ::rand as stdrng;
 
-use crate::{coin_game::{coin_toss::CoinToss, coin_toss_cmd}, common_state::{ButtonAction, CommonState}, machine::machine::Machine};
+use crate::{bang::bang::Bang, coin_game::{coin_toss::CoinToss, coin_toss_cmd}, common_state::{ButtonAction, CommonState}, machine::machine::Machine};
 
 static SAVE_PATH: &str = "./saves/save.txt";
 
@@ -64,6 +64,7 @@ pub fn game_menu(common_state: &mut CommonState) {
         stdout().execute(Print(format!("Money: ${}\tEntropy: {} b\n", common_state.money, common_state.entropy))).unwrap();
         stdout().execute(Print("Game Commands:\n")).unwrap();
         stdout().execute(Print("(1) Coin Toss\n")).unwrap();
+        stdout().execute(Print("(2) BANG!\n")).unwrap();
         stdout().execute(Print("(S)ave Game\n")).unwrap();
         stdout().execute(Print("(Q) Return to Main Menu\n\n")).unwrap();
         let mut buff = String::new();
@@ -80,6 +81,11 @@ pub fn game_menu(common_state: &mut CommonState) {
                     break;
                 }
             }
+        } else if buff == "2" {
+            // BANG instant and start
+            let mut bang = Bang::new();
+            common_state.current_bet = bang.base.bet_min;
+            return;
         } else if buff.to_lowercase() == "s" {
             save_common_state(common_state);
             msg = String::from("!!!!! Saved !!!!!!")
