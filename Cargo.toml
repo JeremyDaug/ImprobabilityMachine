@@ -8,7 +8,6 @@ crossterm = "0.29.0"
 rand = "0.9.2"
 # remove dynamic linking from 
 bevy = { version = "0.17.2", features = ["dynamic_linking"] }
-macroquad = "0.4.14"
 
 # Debugging optimizations.
 # Enable a small amount of optimization in the dev profile.
