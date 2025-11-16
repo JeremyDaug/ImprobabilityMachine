@@ -3,6 +3,7 @@ use std::{collections::HashMap, fs::File, io::Write, path::Path};
 use crate::bang::bang::Bang;
 
 pub mod bang;
+pub mod bang_cmd;
 
 static BANG_CHANCES: &str = "./src/bang/bang_chances.txt";
 
@@ -37,7 +38,7 @@ pub fn bang_probs() {
 
     let mut output = String::new();
     let total_count: i32 = results.values().sum();
-    output += format!("{}", total_count).as_str();
+    output += format!("{}\n", total_count).as_str();
     println!("Total Count: {}\n", total_count);
     let mut keys = results.keys().collect::<Vec<&usize>>();
     keys.sort();
@@ -46,8 +47,9 @@ pub fn bang_probs() {
     for key in keys {
         let val = results.get(key).unwrap();
         println!("{} : {}", key, val);
-        output += format!("{} : {}\n", key, val).as_str();
+        output += format!("{}:{}\n", key, val).as_str();
     }
+    output.pop();
 
     let path = Path::new(BANG_CHANCES);
     let mut file = File::create(path).unwrap();

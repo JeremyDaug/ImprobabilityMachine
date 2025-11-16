@@ -3,7 +3,7 @@ use std::{fs::{self, File}, io::{stdin, stdout, Read, Write}, path::Path, time::
 use crossterm::{style::Print, terminal, ExecutableCommand};
 use ::rand as stdrng;
 
-use crate::{bang::bang::Bang, coin_game::{coin_toss::CoinToss, coin_toss_cmd}, common_state::{ButtonAction, CommonState}, machine::machine::Machine};
+use crate::{bang::{bang::Bang, bang_cmd}, coin_game::{coin_toss::CoinToss, coin_toss_cmd}, common_state::{ButtonAction, CommonState}, machine::machine::Machine};
 
 static SAVE_PATH: &str = "./saves/save.txt";
 
@@ -84,8 +84,16 @@ pub fn game_menu(common_state: &mut CommonState) {
         } else if buff == "2" {
             // BANG instant and start
             let mut bang = Bang::new();
+            bang.load_chances();
             common_state.current_bet = bang.base.bet_min;
-            return;
+            loop {
+                if let Some(res) = bang_cmd::select_screen(common_state, &mut bang, 
+                common_state.last_prior_save, &mut rng) {
+                    bang.state = res;
+                } else {
+                    break;
+                }
+            }
         } else if buff.to_lowercase() == "s" {
             save_common_state(common_state);
             msg = String::from("!!!!! Saved !!!!!!")

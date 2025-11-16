@@ -42,7 +42,7 @@ _start: Instant, rng: &mut R) -> Option<CoinTossState> {
         stdout().execute(
             Print(format!("Money: ${}\tEntropy: {}b\tSuspicion: {}\n", common_state.money, common_state.entropy, coin_toss.base.suspicion))
         ).unwrap();
-        stdout().execute(Print(format!("Current Bet: {}\t Entropy Gained: {}\n", coin_toss.base.current_bet, entropy_gained))).unwrap();
+        stdout().execute(Print(format!("Current Bet: ${}\t Entropy Gained: {}\n", coin_toss.base.current_bet, entropy_gained))).unwrap();
         stdout().execute(Print(format!("Time Remaining: {} s\n", coin_toss.bet_time_remaining()))).unwrap();
         if coin_toss.result {
             stdout().execute(Print("\t\tH\t! You're Winner !\n")).unwrap();
@@ -101,7 +101,7 @@ pub fn start_bet(common_state: &CommonState, coin_toss: &mut CoinToss, start: In
         // 
         stdout().execute(Print("\t\t!!!Coin Toss!!!\nLand on heads to win!\nCommands: F -> Flip | Q -> Exit | Enter number to change Bet\nBet Min: $1 | Bet Max: $100\n")).unwrap();
         stdout().execute(Print(format!("Money: ${}\tEntropy: {} b\n", common_state.money, common_state.entropy))).unwrap();
-        stdout().execute(Print(format!("Current Bet: {}\n", coin_toss.base.current_bet))).unwrap();
+        stdout().execute(Print(format!("Current Bet: ${}\n", coin_toss.base.current_bet))).unwrap();
         stdout().execute(Print(msg.as_str())).unwrap();
         if side == 1 {
             stdout().execute(Print("\t\tH\n")).unwrap();
@@ -129,11 +129,11 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
     stdout().execute(terminal::Clear(terminal::ClearType::All)).unwrap();
     let mut msg = String::new();
     loop {
-        let time = ((Instant::now() - start).as_secs_f32() * 2.0) as i32 % 2;
+        //let time = ((Instant::now() - start).as_secs_f32() * 2.0) as i32 % 2;
         // Set up bet and promts for it.
         stdout().execute(Print("\t\t!!!Coin Toss!!!\nCommands: F -> Flip | Q -> Exit | Enter number to change Bet\nBet Min: $1 | Bet Max: $100\n")).unwrap();
         stdout().execute(Print(format!("Money: ${}\tEntropy: {} b\n", common_state.money, common_state.entropy))).unwrap();
-        stdout().execute(Print(format!("Current Bet: {}\n", coin_toss.base.current_bet))).unwrap();
+        stdout().execute(Print(format!("Current Bet: ${}\n", coin_toss.base.current_bet))).unwrap();
         stdout().execute(Print(msg.as_str())).unwrap();
         stdout().execute(Print("\n\t\t H or T? \n")).unwrap();
         // swap the H / T every half second.
@@ -145,7 +145,7 @@ pub fn holding_screen(common_state: &mut CommonState, coin_toss: &mut CoinToss, 
         if let Ok(bet) = buff.parse::<f64>() {
             if bet < coin_toss.base.bet_min || bet > coin_toss.base.bet_max {
                 msg = String::from("Bet must be within bounds!");
-            } if bet > common_state.money {
+            } else if bet > common_state.money {
                 msg = String::from("Not enough money!!");
             } else {
                 coin_toss.base.current_bet = bet.floor();

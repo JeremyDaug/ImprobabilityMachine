@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use macroquad::miniquad::gl::WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB;
-
 /// The current defacto bet duration. Currently set to 30 seconds.
 const BET_DURATION: Duration = Duration::from_secs(30);
 
